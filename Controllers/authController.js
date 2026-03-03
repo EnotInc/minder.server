@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const pool = require("../DB");
-const { ok, fail } = require("../utils/response");
+const { ok, fail } = require("../sevices/response");
 
 function signToken(user) {
   return jwt.sign(
