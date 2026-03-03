@@ -14,7 +14,7 @@ exports.list = async (req, res) => {
       WHERE e.user_id = $1
       ORDER BY e.event_date DESC
     `;
-
+          
     const result = await pool.query(q, [userId]);
     return ok(res, "Notes loaded", { notes: result.rows });
   } catch (e) {
