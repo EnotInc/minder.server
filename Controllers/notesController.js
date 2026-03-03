@@ -132,14 +132,17 @@ exports.notifyEdit = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { notification } = req.body;
-    if (!notification?.notificatin_id) return fail(res, 400, "notification.notificatin_id is required");
+
+    if (!notification?.notification_id) {
+      return fail(res, 400, "notification.notification_id is required");
+    }
 
     await pool.query(
       `UPDATE reminders
        SET remind_at = COALESCE($1::timestamptz, remind_at),
            notification_type = COALESCE($2, notification_type)
        WHERE id = $3 AND user_id = $4`,
-      [notification.date, notification.type, notification.notificatin_id, userId]
+      [notification.date, notification.type, notification.notification_id, userId]
     );
 
     return ok(res, "Notification updated");
@@ -157,6 +160,63 @@ exports.notifyDelete = async (req, res) => {
 
     await pool.query(`DELETE FROM reminders WHERE id = $1 AND user_id = $2`, [notification_id, userId]);
     return ok(res, "Notification deleted");
+  } catch (e) {
+    console.error(e);
+    return fail(res, 500, "Server error");
+  }
+};
+
+exports.getById = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const id = Number(req.params.id);
+
+    if (!Number.isFinite(id)) return fail(res, 400, "Invalid id");
+
+    const q = `
+      SELECT e.id, e.title, e.description, e.event_date, e.end_date, e.category_id,
+             e.location, e.is_private, e.is_recurring, e.recurrence_rule,
+             e.is_completed, e.priority, e.created_at, e.updated_at,
+             r.id AS reminder_id, r.remind_at, r.notification_type
+      FROM events e
+      LEFT JOIN reminders r ON r.event_id = e.id AND r.user_id = e.user_id
+      WHERE e.user_id = $1 AND e.id = $2
+      LIMIT 1
+    `;
+
+    const result = await pool.query(q, [userId, id]);
+    if (result.rowCount === 0) return fail(res, 404, "Note not found");
+
+    return ok(res, "Note loaded", { note: result.rows[0] });
+  } catch (e) {
+    console.error(e);
+    return fail(res, 500, "Server error");
+  }
+};
+
+exports.notifyList = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const noteId = req.query.note_id ? Number(req.query.note_id) : null;
+
+    if (req.query.note_id && !Number.isFinite(noteId)) {
+      return fail(res, 400, "Invalid note_id");
+    }
+
+    const q = noteId
+      ? `SELECT id, event_id, user_id, remind_at, notification_type, is_sent, created_at
+         FROM reminders
+         WHERE user_id = $1 AND event_id = $2
+         ORDER BY remind_at DESC`
+      : `SELECT id, event_id, user_id, remind_at, notification_type, is_sent, created_at
+         FROM reminders
+         WHERE user_id = $1
+         ORDER BY remind_at DESC`;
+
+    const params = noteId ? [userId, noteId] : [userId];
+    const result = await pool.query(q, params);
+
+    return ok(res, "Notifications loaded", { notifications: result.rows });
   } catch (e) {
     console.error(e);
     return fail(res, 500, "Server error");

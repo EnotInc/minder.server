@@ -1,7 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const pool = require("../DB");
-const { ok, fail } = require("../sevices/response");
+const { ok, fail } = require("../services/response");
 
 function signToken(user) {
   return jwt.sign(
@@ -62,4 +62,9 @@ exports.login = async (req, res) => {
     console.error(e);
     return fail(res, 500, "Server error");
   }
+};
+
+exports.me = async (req, res) => {
+  // req.user положил middleware/auth.js после проверки JWT
+  return ok(res, "Me", { user: req.user });
 };
