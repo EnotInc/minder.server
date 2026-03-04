@@ -20,8 +20,6 @@ function verifyRefreshToken(token) {
 function hashToken(token) {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
-
-// для вычисления expires_at (по умолчанию 7 дней)
 function calcRefreshExpiresAt() {
   const days = Number(process.env.JWT_REFRESH_DAYS || 7);
   const d = new Date();

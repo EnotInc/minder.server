@@ -1,8 +1,6 @@
 const { ok, fail } = require("../services/response");
 const logger = require("../services/logger");
 const q = require("../DB/queries/categoriesQueries");
-
-// GET /apiv1/categories
 exports.list = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -21,8 +19,6 @@ exports.list = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
-
-// POST /apiv1/categories/add
 exports.add = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -41,8 +37,6 @@ exports.add = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
-
-// POST /apiv1/categories/edit
 exports.edit = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -62,8 +56,6 @@ exports.edit = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
-
-// DELETE /apiv1/categories/delete
 exports.remove = async (req, res) => {
   try {
     const userId = req.user.userId;

@@ -88,8 +88,6 @@ exports.refresh = async (req, res) => {
     const row = existing.rows[0];
     if (row.revoked_at) return fail(res, 401, "Refresh token revoked");
     if (new Date(row.expires_at) < new Date()) return fail(res, 401, "Refresh token expired");
-
-    // rotation
     const newAccessToken = signAccessToken({ userId: payload.userId });
     const newRefreshToken = signRefreshToken({ userId: payload.userId });
     const newHash = hashToken(newRefreshToken);

@@ -16,7 +16,6 @@ function ensureDir() {
   try {
     if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
   } catch {
-    // молча
   }
 }
 
@@ -25,7 +24,6 @@ function writeLine(line) {
     ensureDir();
     fs.appendFileSync(LOG_FILE, line + "\n", { encoding: "utf8" });
   } catch {
-    // молча: логгер не должен валить приложение
   }
 }
 
@@ -49,7 +47,6 @@ function error(message, err, meta = {}) {
       error: { name: err?.name, message: err?.message, stack: err?.stack },
     });
   } catch {}
-  // fallback в консоль — тоже в try/catch
   try { console.error(message, err); } catch {}
 }
 

@@ -1,8 +1,6 @@
 const { ok, fail } = require("../services/response");
 const logger = require("../services/logger");
 const q = require("../DB/queries/notesQueries");
-
-// GET /apiv1/notes
 exports.list = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -16,8 +14,6 @@ exports.list = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
-
-// GET /apiv1/notes/:id
 exports.getById = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -35,8 +31,6 @@ exports.getById = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
-
-// POST /apiv1/notes/add
 exports.add = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -61,8 +55,6 @@ exports.add = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
-
-// POST /apiv1/notes/edit
 exports.edit = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -81,8 +73,6 @@ exports.edit = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
-
-// DELETE /apiv1/notes/delete
 exports.remove = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -101,8 +91,6 @@ exports.remove = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
-
-// GET /apiv1/notes/notify/list
 exports.notifyList = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -119,8 +107,6 @@ exports.notifyList = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
-
-// POST /apiv1/notes/notify/add
 exports.notifyAdd = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -137,8 +123,6 @@ exports.notifyAdd = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
-
-// POST /apiv1/notes/notify/edit
 exports.notifyEdit = async (req, res) => {
   try {
     const userId = req.user.userId;
@@ -156,8 +140,6 @@ exports.notifyEdit = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
-
-// DELETE /apiv1/notes/notify/delete
 exports.notifyDelete = async (req, res) => {
   try {
     const userId = req.user.userId;
