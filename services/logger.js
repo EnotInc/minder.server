@@ -1,10 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 
-// подключение к БД (best-effort)
+
 let pool = null;
 try {
-  pool = require("../DB"); // у тебя DB/index.js экспортирует pool
+  pool = require("../DB"); 
 } catch {
   pool = null;
 }
@@ -24,7 +24,7 @@ function ensureDir() {
   try {
     if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
   } catch {
-    // молча
+    
   }
 }
 
@@ -33,11 +33,11 @@ function writeLine(line) {
     ensureDir();
     fs.appendFileSync(LOG_FILE, line + "\n", { encoding: "utf8" });
   } catch {
-    // молча
+    
   }
 }
 
-// Пишем в БД НЕ блокируя поток, всегда с .catch
+
 function writeDb(entry) {
   try {
     if (!pool) return;
@@ -61,10 +61,10 @@ function writeDb(entry) {
       JSON.stringify(meta),
     ];
 
-    // важно: не await, но обязательно catch
+    
     Promise.resolve(pool.query(q, params)).catch(() => {});
   } catch {
-    // молча
+    
   }
 }
 
@@ -76,12 +76,12 @@ function log(level, message, meta = {}) {
     meta,
   };
 
-  // 1) файл
+  
   try {
     writeLine(safeJson(entry));
   } catch {}
 
-  // 2) БД (best-effort)
+  
   writeDb(entry);
 }
 
@@ -101,7 +101,7 @@ function error(message, err, meta = {}) {
     });
   } catch {}
 
-  // fallback в консоль
+  
   try { console.error(message, err); } catch {}
 }
 

@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const pool = require("./DB"); // DB/index.js экспортирует pool
+const pool = require("./DB"); 
 
 const MIGRATIONS_DIR = path.join(__dirname, "migrations");
 
