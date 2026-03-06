@@ -2,7 +2,8 @@ const pool = require("../index");
 
 async function listNotes(userId) {
   const q = `
-    SELECT e.id, e.title, e.description, e.color, e.event_date, e.end_date, e.category_id,
+    SELECT e.id, e.title, e.description, e.color, e.is_important,
+           e.event_date, e.end_date, e.category_id,
            e.location, e.is_private, e.is_recurring, e.recurrence_rule,
            e.is_completed, e.priority, e.created_at, e.updated_at,
            r.id AS reminder_id, r.remind_at, r.notification_type
@@ -16,7 +17,8 @@ async function listNotes(userId) {
 
 async function getNoteById(userId, noteId) {
   const q = `
-    SELECT e.id, e.title, e.description, e.color, e.event_date, e.end_date, e.category_id,
+    SELECT e.id, e.title, e.description, e.color, e.is_important,
+           e.event_date, e.end_date, e.category_id,
            e.location, e.is_private, e.is_recurring, e.recurrence_rule,
            e.is_completed, e.priority, e.created_at, e.updated_at,
            r.id AS reminder_id, r.remind_at, r.notification_type
@@ -30,16 +32,20 @@ async function getNoteById(userId, noteId) {
 
 async function createNote(userId, note) {
   const q = `
-    INSERT INTO events (user_id, title, description, event_date, is_private, priority, category_id, color)
+    INSERT INTO events (
+      user_id, title, description, color, is_important,
+      event_date, is_private, priority, category_id
+    )
     VALUES (
       $1,
       $2,
       $3,
-      COALESCE($4::timestamptz, NOW()),
-      COALESCE($5, TRUE),
-      COALESCE($6, 0),
-      $7,
-      COALESCE($8, '#3498db')
+      COALESCE($4, '#3498db'),
+      COALESCE($5, FALSE),
+      COALESCE($6::timestamptz, NOW()),
+      COALESCE($7, TRUE),
+      COALESCE($8, 0),
+      $9
     )
     RETURNING id
   `;
@@ -48,11 +54,12 @@ async function createNote(userId, note) {
     userId,
     note.header,
     note.text || null,
+    note.color ?? null,
+    note.is_important ?? null,
     note.date || null,
     note.is_private ?? true,
     note.priority ?? 0,
     note.category_id ?? null,
-    note.color ?? null,
   ];
 
   return pool.query(q, params);
@@ -64,11 +71,12 @@ async function updateNote(userId, note) {
     SET title = COALESCE($1, title),
         description = COALESCE($2, description),
         color = COALESCE($3, color),
-        event_date = COALESCE($4::timestamptz, event_date),
-        is_private = COALESCE($5, is_private),
-        priority = COALESCE($6, priority),
-        category_id = COALESCE($7, category_id)
-    WHERE id = $8 AND user_id = $9
+        is_important = COALESCE($4, is_important),
+        event_date = COALESCE($5::timestamptz, event_date),
+        is_private = COALESCE($6, is_private),
+        priority = COALESCE($7, priority),
+        category_id = COALESCE($8, category_id)
+    WHERE id = $9 AND user_id = $10
     RETURNING id
   `;
 
@@ -76,6 +84,7 @@ async function updateNote(userId, note) {
     note.header ?? null,
     note.text ?? null,
     note.color ?? null,
+    note.is_important ?? null,
     note.date ?? null,
     note.is_private ?? null,
     note.priority ?? null,

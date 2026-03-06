@@ -1,6 +1,14 @@
 const fs = require("fs");
 const path = require("path");
 
+// подключение к БД (best-effort)
+let pool = null;
+try {
+  pool = require("../DB"); // у тебя DB/index.js экспортирует pool
+} catch {
+  pool = null;
+}
+
 const LOG_DIR = path.join(__dirname, "..", "logs");
 const LOG_FILE = path.join(LOG_DIR, "app.log");
 
@@ -16,6 +24,7 @@ function ensureDir() {
   try {
     if (!fs.existsSync(LOG_DIR)) fs.mkdirSync(LOG_DIR, { recursive: true });
   } catch {
+    // молча
   }
 }
 
@@ -24,12 +33,56 @@ function writeLine(line) {
     ensureDir();
     fs.appendFileSync(LOG_FILE, line + "\n", { encoding: "utf8" });
   } catch {
+    // молча
+  }
+}
+
+// Пишем в БД НЕ блокируя поток, всегда с .catch
+function writeDb(entry) {
+  try {
+    if (!pool) return;
+
+    const meta = entry.meta ?? {};
+    const q = `
+      INSERT INTO app_logs (ts, level, message, request_id, user_id, method, path, status, ms, meta)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::jsonb)
+    `;
+
+    const params = [
+      entry.ts ? new Date(entry.ts) : new Date(),
+      entry.level || "info",
+      entry.message || "",
+      meta.requestId || null,
+      meta.userId || null,
+      meta.method || null,
+      meta.path || null,
+      meta.status ?? null,
+      meta.ms ?? null,
+      JSON.stringify(meta),
+    ];
+
+    // важно: не await, но обязательно catch
+    Promise.resolve(pool.query(q, params)).catch(() => {});
+  } catch {
+    // молча
   }
 }
 
 function log(level, message, meta = {}) {
-  const entry = { ts: new Date().toISOString(), level, message, meta };
-  writeLine(safeJson(entry));
+  const entry = {
+    ts: new Date().toISOString(),
+    level,
+    message,
+    meta,
+  };
+
+  // 1) файл
+  try {
+    writeLine(safeJson(entry));
+  } catch {}
+
+  // 2) БД (best-effort)
+  writeDb(entry);
 }
 
 function info(message, meta) {
@@ -47,6 +100,8 @@ function error(message, err, meta = {}) {
       error: { name: err?.name, message: err?.message, stack: err?.stack },
     });
   } catch {}
+
+  // fallback в консоль
   try { console.error(message, err); } catch {}
 }
 

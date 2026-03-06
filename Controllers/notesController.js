@@ -1,9 +1,26 @@
-const { ok, fail } = require("../services/response");
+const { ok, failSoft, fail } = require("../services/response");
 const logger = require("../services/logger");
 const q = require("../DB/queries/notesQueries");
+
+// GET /apiv1/notes
+// Если в body передали note_id/id -> вернуть одну заметку
 exports.list = async (req, res) => {
   try {
     const userId = req.user.userId;
+    const noteIdRaw = req.body?.note_id ?? req.body?.id;
+
+    if (noteIdRaw !== undefined) {
+      const noteId = Number(noteIdRaw);
+      if (!Number.isFinite(noteId)) return failSoft(res, "Invalid note_id");
+
+      const one = await q.getNoteById(userId, noteId);
+      if (one.rowCount === 0) return failSoft(res, "Note not found");
+
+      logger.info("notes.getByBodyId", { requestId: req.requestId, userId, noteId });
+
+      return ok(res, "Note loaded", { note: one.rows[0] });
+    }
+
     const result = await q.listNotes(userId);
 
     logger.info("notes.list", { requestId: req.requestId, userId });
@@ -14,14 +31,16 @@ exports.list = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
+
+// GET /apiv1/notes/:id
 exports.getById = async (req, res) => {
   try {
     const userId = req.user.userId;
     const id = Number(req.params.id);
-    if (!Number.isFinite(id)) return fail(res, 400, "Invalid id");
+    if (!Number.isFinite(id)) return failSoft(res, "Invalid id");
 
     const result = await q.getNoteById(userId, id);
-    if (result.rowCount === 0) return fail(res, 404, "Note not found");
+    if (result.rowCount === 0) return failSoft(res, "Note not found");
 
     logger.info("notes.getById", { requestId: req.requestId, userId, noteId: id });
 
@@ -31,12 +50,14 @@ exports.getById = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
+
+// POST /apiv1/notes/add
 exports.add = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { note, notification } = req.body || {};
 
-    if (!note?.header) return fail(res, 400, "note.header is required");
+    if (!note?.header) return failSoft(res, "note.header is required");
 
     const createdEvent = await q.createNote(userId, note);
     const eventId = createdEvent.rows[0].id;
@@ -55,15 +76,17 @@ exports.add = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
+
+// POST /apiv1/notes/edit
 exports.edit = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { note } = req.body || {};
 
-    if (!note?.note_id) return fail(res, 400, "note.note_id is required");
+    if (!note?.note_id) return failSoft(res, "note.note_id is required");
 
     const updated = await q.updateNote(userId, note);
-    if (updated.rowCount === 0) return fail(res, 404, "Note not found");
+    if (updated.rowCount === 0) return failSoft(res, "Note not found");
 
     logger.info("notes.edit", { requestId: req.requestId, userId, noteId: note.note_id });
 
@@ -73,15 +96,17 @@ exports.edit = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
+
+// DELETE /apiv1/notes/delete
 exports.remove = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { note_id } = req.body || {};
 
-    if (!note_id) return fail(res, 400, "note_id is required");
+    if (!note_id) return failSoft(res, "note_id is required");
 
     const deleted = await q.deleteNote(userId, note_id);
-    if (deleted.rowCount === 0) return fail(res, 404, "Note not found");
+    if (deleted.rowCount === 0) return failSoft(res, "Note not found");
 
     logger.info("notes.delete", { requestId: req.requestId, userId, noteId: note_id });
 
@@ -91,11 +116,13 @@ exports.remove = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
+
+// GET /apiv1/notes/notify/list
 exports.notifyList = async (req, res) => {
   try {
     const userId = req.user.userId;
     const noteId = req.query.note_id ? Number(req.query.note_id) : null;
-    if (req.query.note_id && !Number.isFinite(noteId)) return fail(res, 400, "Invalid note_id");
+    if (req.query.note_id && !Number.isFinite(noteId)) return failSoft(res, "Invalid note_id");
 
     const result = await q.listReminders(userId, noteId);
 
@@ -107,15 +134,25 @@ exports.notifyList = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
+
+// POST /apiv1/notes/notify/add
 exports.notifyAdd = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { note_id, notification } = req.body || {};
-    if (!note_id || !notification?.date) return fail(res, 400, "note_id and notification.date are required");
+
+    if (!note_id || !notification?.date) {
+      return failSoft(res, "note_id and notification.date are required");
+    }
 
     const r = await q.createReminder(userId, note_id, notification);
 
-    logger.info("notify.add", { requestId: req.requestId, userId, noteId: note_id, notificationId: r.rows[0].id });
+    logger.info("notify.add", {
+      requestId: req.requestId,
+      userId,
+      noteId: note_id,
+      notificationId: r.rows[0].id,
+    });
 
     return ok(res, "Notification added", { notification: r.rows[0] });
   } catch (e) {
@@ -123,14 +160,19 @@ exports.notifyAdd = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
+
+// POST /apiv1/notes/notify/edit
 exports.notifyEdit = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { notification } = req.body || {};
-    if (!notification?.notification_id) return fail(res, 400, "notification.notification_id is required");
+
+    if (!notification?.notification_id) {
+      return failSoft(res, "notification.notification_id is required");
+    }
 
     const updated = await q.updateReminder(userId, notification);
-    if (updated.rowCount === 0) return fail(res, 404, "Notification not found");
+    if (updated.rowCount === 0) return failSoft(res, "Notification not found");
 
     logger.info("notify.edit", { requestId: req.requestId, userId, notificationId: notification.notification_id });
 
@@ -140,14 +182,17 @@ exports.notifyEdit = async (req, res) => {
     return fail(res, 500, "Server error");
   }
 };
+
+// DELETE /apiv1/notes/notify/delete
 exports.notifyDelete = async (req, res) => {
   try {
     const userId = req.user.userId;
     const notification_id = (req.body && req.body.notification_id) ?? req.query.notification_id;
-    if (!notification_id) return fail(res, 400, "notification_id is required");
+
+    if (!notification_id) return failSoft(res, "notification_id is required");
 
     const deleted = await q.deleteReminder(userId, notification_id);
-    if (deleted.rowCount === 0) return fail(res, 404, "Notification not found");
+    if (deleted.rowCount === 0) return failSoft(res, "Notification not found");
 
     logger.info("notify.delete", { requestId: req.requestId, userId, notificationId: notification_id });
 

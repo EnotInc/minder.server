@@ -47,10 +47,21 @@ async function deleteUserCategory(userId, id) {
   );
 }
 
+async function getSystemCategoryById(id) {
+  return pool.query(
+    `SELECT id, name, color, icon, description, is_system, created_at
+     FROM categories
+     WHERE is_system = TRUE AND id = $1
+     LIMIT 1`,
+    [id]
+  );
+}
+
 module.exports = {
   listSystemCategories,
   listUserCategories,
   createUserCategory,
   updateUserCategory,
   deleteUserCategory,
+  getSystemCategoryById,
 };
