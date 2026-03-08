@@ -17,17 +17,23 @@ app.use(express.json());
 app.use(requestId);
 app.use(requestLogger);
 
-app.get("/", (req, res) => res.send("Minder API"));
+app.get("/", (_, res) => res.send("Minder API"));
+
+/* 
+ * NOTE: maybe use `health` instead
+ * Used to check if server is alive
+ */
+app.get("/apiv1/ping", (_, res) => res.send("pong"));
 
 app.use("/apiv1/auth", authRouter);
 app.use("/apiv1/notes", notesRouter);
 app.use("/apiv1/categories", categoriesRouter);
 
-app.use((req, res) => {
+app.use((_, res) => {
   res.status(404).json({ success: false, message: "Not found" });
 });
 
-app.use((err, req, res, next) => {
+app.use((err, req, res, _) => {
   logger.error("Unhandled error", err, {
     requestId: req.requestId,
     method: req.method,
