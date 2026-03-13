@@ -19,11 +19,13 @@ app.use(requestLogger);
 
 app.get("/", (_, res) => res.send("Minder API"));
 
+
 /* 
  * NOTE: maybe use `health` instead
  * Used to check if server is alive
  */
-app.get("/apiv1/ping", (_, res) => res.send("pong"));
+app.get("/apiv1/ping", (_, res) => res.send("pong")); //
+
 
 app.use("/apiv1/auth", authRouter);
 app.use("/apiv1/notes", notesRouter);
