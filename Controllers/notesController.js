@@ -154,6 +154,8 @@ exports.remove = async (req, res) => {
     if (deleted.rowCount === 0) return failSoft(res, "Note not found");
 
     logger.info("notes.delete", { requestId: req.requestId, userId, noteId: note_id });
+    
+    NotifyService.deledeSchedule(note_id)
 
     return ok(res, "Note deleted", { id: deleted.rows[0].id });
   } catch (e) {
@@ -229,6 +231,8 @@ exports.notifyEdit = async (req, res) => {
 
     logger.info("notify.edit", { requestId: req.requestId, userId, notificationId: notification.notification_id });
 
+    NotifyService.editSchedule(notification.date, userId, updated.rows[0].event_id)
+
     return ok(res, "Notification updated");
   } catch (e) {
     logger.error("notify.edit failed", e, { requestId: req.requestId, userId: req.user?.userId });
@@ -246,6 +250,8 @@ exports.notifyDelete = async (req, res) => {
 
     const deleted = await q.deleteReminder(userId, notification_id);
     if (deleted.rowCount === 0) return failSoft(res, "Notification not found");
+
+    NotifyService.deledeSchedule(deleted.rows[0].event_id)
 
     logger.info("notify.delete", { requestId: req.requestId, userId, notificationId: notification_id });
 

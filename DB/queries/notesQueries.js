@@ -118,14 +118,14 @@ async function updateReminder(userId, notification) {
     SET remind_at = COALESCE($1::timestamptz, remind_at),
         notification_type = COALESCE($2, notification_type)
     WHERE id = $3 AND user_id = $4
-    RETURNING id
+    RETURNING id, event_id
   `;
   return pool.query(q, [notification.date, notification.type, notification.notification_id, userId]);
 }
 
 async function deleteReminder(userId, notificationId) {
   return pool.query(
-    `DELETE FROM reminders WHERE id = $1 AND user_id = $2 RETURNING id`,
+    `DELETE FROM reminders WHERE id = $1 AND user_id = $2 RETURNING id, event_id`,
     [notificationId, userId]
   );
 }

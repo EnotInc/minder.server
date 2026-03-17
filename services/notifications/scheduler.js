@@ -1,7 +1,11 @@
-const cron = require("node-cron")
-const NotificationService = require("./notification.js")
+const cron = require("node-cron");
+const logger = require("../logger.js");
 const q_notes = require("../../DB/queries/notesQueries");
 const q_auth = require("../../DB/queries/authQueries.js");
+
+const NotificationService = require("./notification.js");
+
+const schedule = {};
 
 function mapNoteRow(row) {
   const note = {
@@ -35,6 +39,16 @@ function mapNoteRow(row) {
   return note;
 }
 
+exports.deledeSchedule = async (note_id) => {
+  if (schedule[note_id]){
+    schedule[note_id].stop();
+  }
+}
+
+exports.editSchedule = async (new_time, user_id, note_id) => {
+  await this.addSchedule(new_time, user_id, note_id);
+}
+
 exports.addSchedule = async (when, user_id, note_id) =>{
     const date = new Date(when);
     const minutes = date.getMinutes();
@@ -44,12 +58,35 @@ exports.addSchedule = async (when, user_id, note_id) =>{
 
     const time = `${minutes} ${hours} ${dayOfMonth} ${month} *`;
 
-    cron.schedule(time, async () => {
+    try {
+      logger.info("adding new notification", {userid: user_id, when: when, note_id: note_id})
+
+      if (schedule[note_id]){
+        await schedule[note_id].stop();
+      }
+
+      schedule[note_id] = cron.schedule(time, async () => {
         const fcmToken = await q_auth.getFcmToken(user_id)
+        if (!fcmToken || fcmToken == "") {
+          logger.warn("Unable to send message. User is not logged in. FcmToken is not found")
+          schedule[note_id].stop()
+          return;
+        }
 
         const one = await q_notes.getNoteById(user_id, note_id);
         const note = mapNoteRow(one.rows[0]);
+
         NotificationService.send(fcmToken.rows[0].fcm_token, note.title, note.description)
-        // TODO: delete notification?
-    });
+        logger.info("Sending message", {
+          note: {
+            title: note.title,
+            description: note.description,
+          },
+          fcmToken: fcmToken.rows[0].fcm_token
+        })
+        await q_notes.deleteReminder(user_id, note.notification.id)
+      });
+    } catch (e) {
+      logger.error("Cannot send message", e)
+    }
 }

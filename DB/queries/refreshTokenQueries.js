@@ -32,9 +32,18 @@ async function logoutRefreshToken(tokenHash) {
     `UPDATE refresh_tokens
      SET revoked_at = CURRENT_TIMESTAMP
      WHERE token_hash=$1 AND revoked_at IS NULL
-     RETURNING id`,
+     RETURNING id, user_id`,
     [tokenHash]
   );
+}
+
+async function logoutFcmToken(user_id) {
+  return pool.query(
+    ` UPDATE user_devices
+      SET fcm_token = ""
+      WHERE user_id = $1`,
+      [user_id]
+  )
 }
 
 module.exports = {
@@ -42,4 +51,5 @@ module.exports = {
   findRefreshToken,
   revokeRefreshToken,
   logoutRefreshToken,
+  logoutFcmToken
 };

@@ -51,7 +51,6 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password, fcmToken } = req.body || {};
-    console.log(req.body)
 
     if (!email || !password) {
       return failSoft(res, "email and password are required");
@@ -67,7 +66,6 @@ exports.login = async (req, res) => {
       return failSoft(res, "User is inactive");
     }
 
-    console.log(user.id, fcmToken)
     await authQ.updateDevice(user.id, fcmToken)
 
     const match = await bcrypt.compare(password, user.password_hash);
@@ -144,7 +142,11 @@ exports.logout = async (req, res) => {
     }
 
     const tokenHash = hashToken(refresh_token);
-    await rtQ.logoutRefreshToken(tokenHash);
+    const logout = await rtQ.logoutRefreshToken(tokenHash);
+
+    const user_id = logout.rows[0].user_id
+    await rtQ.logoutFcmToken(user_id);
+
 
     logger.info("auth.logout", { requestId: req.requestId });
 
