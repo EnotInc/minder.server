@@ -17,7 +17,7 @@ exports.me = async (req, res) => ok(res, "Me", { user: req.user });
 
 exports.register = async (req, res) => {
   try {
-    const { username, email, password } = req.body || {};
+    const { username, email, password, fcmToken } = req.body || {};
 
     if (!username || !email || !password) {
       return failSoft(res, "username, email, password are required");
@@ -31,6 +31,8 @@ exports.register = async (req, res) => {
     const password_hash = await bcrypt.hash(password, 10);
     const created = await authQ.createUser({ username, email, password_hash });
     const user = created.rows[0];
+
+    await authQ.creadeDevice(user.id, fcmToken)
 
     const accessToken = signAccessToken({ userId: user.id, email: user.email });
     const refreshToken = signRefreshToken({ userId: user.id });
@@ -48,7 +50,8 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body || {};
+    const { email, password, fcmToken } = req.body || {};
+    console.log(req.body)
 
     if (!email || !password) {
       return failSoft(res, "email and password are required");
@@ -63,6 +66,9 @@ exports.login = async (req, res) => {
     if (!user.is_active) {
       return failSoft(res, "User is inactive");
     }
+
+    console.log(user.id, fcmToken)
+    await authQ.updateDevice(user.id, fcmToken)
 
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {

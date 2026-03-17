@@ -2,6 +2,8 @@ const { ok, failSoft, fail } = require("../services/response");
 const logger = require("../services/logger");
 const q = require("../DB/queries/notesQueries");
 
+const NotifyService = require("../services/notifications/scheduler.js")
+
 function mapNoteRow(row) {
   const note = {
     id: row.id,
@@ -107,6 +109,8 @@ exports.add = async (req, res) => {
         remind_at: r.rows[0].remind_at,
         notification_type: r.rows[0].notification_type,
       };
+
+      NotifyService.addSchedule(notification.date, userId, eventId)
     }
 
     logger.info("notes.add", { requestId: req.requestId, userId, eventId });
@@ -194,6 +198,8 @@ exports.notifyAdd = async (req, res) => {
       noteId: note_id,
       notificationId: r.rows[0].id,
     });
+
+    NotifyService.addSchedule(notification.date, userId, note_id)
 
     return ok(res, "Notification added", {
       notification: {

@@ -25,4 +25,32 @@ async function findUserByEmail(email) {
   );
 }
 
-module.exports = { userExists, createUser, findUserByEmail };
+// TODO: refactor
+async function creadeDevice(user_id, fcmToken) {
+  return pool.query(
+    ` INSERT INTO user_devices (user_id, fcm_token, platform)
+      VALUES ($1, $2, 'android')`,
+      [user_id, fcmToken]
+  )
+}
+
+// TODO: refactor
+async function updateDevice(user_id, fcmToken) {
+  return pool.query(
+    ` UPDATE user_devices
+      SET fcm_token = $2
+      WHERE user_id = $1`,
+      [user_id, fcmToken]
+  )
+}
+
+async function getFcmToken(user_id){
+  return pool.query(
+    `SELECT fcm_token
+     FROM user_devices
+     WHERE user_id = $1`,
+    [user_id] 
+  )
+}
+
+module.exports = { userExists, createUser, findUserByEmail, creadeDevice, updateDevice, getFcmToken };
