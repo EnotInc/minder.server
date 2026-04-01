@@ -43,6 +43,7 @@ exports.list = async (req, res) => {
     const userId = req.user.userId;
     const noteIdRaw = req.body?.note_id ?? req.body?.id;
 
+
     if (noteIdRaw !== undefined) {
       const noteId = Number(noteIdRaw);
       if (!Number.isFinite(noteId)) return failSoft(res, "Invalid note_id");

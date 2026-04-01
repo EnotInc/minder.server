@@ -3,7 +3,7 @@ const logger = require("../logger");
 
 class Notification {
     static async send(fcmToken, title, body) {
-        const icon = "launcher_icon_monochrome";
+        const icon = "ic_launcher_monochrome";
         try {
             const message = {
                 notification: {
