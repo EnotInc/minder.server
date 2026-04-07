@@ -8,48 +8,54 @@ const NotificationService = require("./notification.js");
 const schedule = {};
 
 function mapNoteRow(row) {
-  const note = {
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    color: row.color,
-    is_important: row.is_important,
-    event_date: row.event_date,
-    end_date: row.end_date,
-    category_id: row.category_id,
-    location: row.location,
-    is_private: row.is_private,
-    is_recurring: row.is_recurring,
-    recurrence_rule: row.recurrence_rule,
-    is_completed: row.is_completed,
-    priority: row.priority,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
-    notification: null,
-  };
-
-  if (row.reminder_id) {
-    note.notification = {
-      id: row.reminder_id,
-      remind_at: row.remind_at,
-      notification_type: row.notification_type,
+  try {
+    const note = {
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      color: row.color,
+      is_important: row.is_important,
+      event_date: row.event_date,
+      end_date: row.end_date,
+      category_id: row.category_id,
+      location: row.location,
+      is_private: row.is_private,
+      is_recurring: row.is_recurring,
+      recurrence_rule: row.recurrence_rule,
+      is_completed: row.is_completed,
+      priority: row.priority,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      notification: null,
     };
-  }
 
-  return note;
+    if (row.reminder_id) {
+      note.notification = {
+        id: row.reminder_id,
+        remind_at: row.remind_at,
+        notification_type: row.notification_type,
+        is_sent: row.is_sent,
+      };
+    }
+
+    return note;
+  } catch(e) {
+    logger.error("Cannot convert to note: ", e);
+    return null;
+  }
 }
 
-exports.deledeSchedule = async (note_id) => {
+async function deledeSchedule(note_id) {
   if (schedule[note_id]){
     schedule[note_id].stop();
   }
 }
 
-exports.editSchedule = async (new_time, user_id, note_id) => {
-  await this.addSchedule(new_time, user_id, note_id);
+async function editSchedule(new_time, user_id, note_id) {
+  await addSchedule(new_time, user_id, note_id);
 }
 
-exports.addSchedule = async (when, user_id, note_id) =>{
+async function addSchedule (when, user_id, note_id) {
     const date = new Date(when);
     const minutes = date.getMinutes();
     const hours = date.getHours();
@@ -84,9 +90,27 @@ exports.addSchedule = async (when, user_id, note_id) =>{
           },
           fcmToken: fcmToken.rows[0].fcm_token
         })
-        await q_notes.deleteReminder(user_id, note.notification.id)
+        //await q_notes.deleteReminder(user_id, note.notification.id)
+        await q_notes.markAsSend(note.notification.id)
       });
     } catch (e) {
       logger.error("Cannot send message", e)
     }
 }
+
+restoreSchedules = async() => {
+  try {
+    logger.info("readAllSchedules");
+
+    const result = await q_notes.listAllReminders();
+    const rows = result.rows;
+
+    for (const row of rows) {
+      addSchedule(row.remind_at, row.user_id, row.event_id)
+    }
+  } catch (e) {
+    logger.error("readAllSchedules failed", e);
+  }
+}
+
+module.exports = { editSchedule, addSchedule, restoreSchedules, deledeSchedule }

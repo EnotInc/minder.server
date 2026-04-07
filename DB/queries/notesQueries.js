@@ -6,7 +6,7 @@ async function listNotes(userId) {
            e.event_date, e.end_date, e.category_id,
            e.location, e.is_private, e.is_recurring, e.recurrence_rule,
            e.is_completed, e.priority, e.created_at, e.updated_at,
-           r.id AS reminder_id, r.remind_at, r.notification_type
+           r.id AS reminder_id, r.remind_at, r.notification_type, r.is_sent
     FROM events e
     LEFT JOIN reminders r ON r.event_id = e.id AND r.user_id = e.user_id
     WHERE e.user_id = $1
@@ -21,7 +21,7 @@ async function getNoteById(userId, noteId) {
            e.event_date, e.end_date, e.category_id,
            e.location, e.is_private, e.is_recurring, e.recurrence_rule,
            e.is_completed, e.priority, e.created_at, e.updated_at,
-           r.id AS reminder_id, r.remind_at, r.notification_type
+           r.id AS reminder_id, r.remind_at, r.notification_type, r.is_sent
     FROM events e
     LEFT JOIN reminders r ON r.event_id = e.id AND r.user_id = e.user_id
     WHERE e.user_id = $1 AND e.id = $2
@@ -150,6 +150,24 @@ async function listReminders(userId, noteIdNullable) {
   );
 }
 
+async function listAllReminders() {
+  return pool.query(
+    `SELECT id, event_id, user_id, remind_at, notification_type, is_sent, created_at
+     FROM reminders
+     WHERE remind_at > CURRENT_TIMESTAMP
+     ORDER BY remind_at DESC`,
+  );
+}
+
+async function markAsSend(event_id) {
+  return pool.query(
+    ` UPDATE reminders
+      SET is_sent = true, sent_at = current_timestamp
+      Where event_id = $1`,
+    [event_id]
+  );
+}
+
 module.exports = {
   listNotes,
   getNoteById,
@@ -160,4 +178,6 @@ module.exports = {
   updateReminder,
   deleteReminder,
   listReminders,
+  listAllReminders,
+  markAsSend,
 };

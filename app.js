@@ -8,6 +8,7 @@ const categoriesRouter = require("./Routes/categoriesRouter");
 const logger = require("./services/logger");
 const requestId = require("./middleware/requestId");
 const requestLogger = require("./middleware/requestLogger");
+const { restoreSchedules } = require("./services/notifications/scheduler");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -20,12 +21,9 @@ app.use(requestLogger);
 app.get("/", (_, res) => res.send("Minder API"));
 
 
-/* 
- * NOTE: maybe use `health` instead
- * Used to check if server is alive
- */
+// NOTE: maybe use `health` instead
+// Used to check if server is alive
 app.get("/apiv1/ping", (_, res) => res.send("pong")); //
-
 
 app.use("/apiv1/auth", authRouter);
 app.use("/apiv1/notes", notesRouter);
@@ -45,4 +43,5 @@ app.use((err, req, res, _) => {
   res.status(500).json({ success: false, message: "Server error" });
 });
 
+restoreSchedules()
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));

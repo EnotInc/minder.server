@@ -2,7 +2,7 @@ const { ok, failSoft, fail } = require("../services/response");
 const logger = require("../services/logger");
 const q = require("../DB/queries/notesQueries");
 
-const NotifyService = require("../services/notifications/scheduler.js")
+const { addSchedule, editSchedule, deledeSchedule } = require("../services/notifications/scheduler");
 
 function mapNoteRow(row) {
   const note = {
@@ -30,6 +30,7 @@ function mapNoteRow(row) {
       id: row.reminder_id,
       remind_at: row.remind_at,
       notification_type: row.notification_type,
+      is_sent: row.is_sent,
     };
   }
 
@@ -111,7 +112,7 @@ exports.add = async (req, res) => {
         notification_type: r.rows[0].notification_type,
       };
 
-      NotifyService.addSchedule(notification.date, userId, eventId)
+      addSchedule(notification.date, userId, eventId)
     }
 
     logger.info("notes.add", { requestId: req.requestId, userId, eventId });
@@ -156,7 +157,7 @@ exports.remove = async (req, res) => {
 
     logger.info("notes.delete", { requestId: req.requestId, userId, noteId: note_id });
     
-    NotifyService.deledeSchedule(note_id)
+    deledeSchedule(note_id)
 
     return ok(res, "Note deleted", { id: deleted.rows[0].id });
   } catch (e) {
@@ -202,7 +203,7 @@ exports.notifyAdd = async (req, res) => {
       notificationId: r.rows[0].id,
     });
 
-    NotifyService.addSchedule(notification.date, userId, note_id)
+    addSchedule(notification.date, userId, note_id)
 
     return ok(res, "Notification added", {
       notification: {
@@ -232,7 +233,7 @@ exports.notifyEdit = async (req, res) => {
 
     logger.info("notify.edit", { requestId: req.requestId, userId, notificationId: notification.notification_id });
 
-    NotifyService.editSchedule(notification.date, userId, updated.rows[0].event_id)
+    editSchedule(notification.date, userId, updated.rows[0].event_id)
 
     return ok(res, "Notification updated");
   } catch (e) {
@@ -252,7 +253,7 @@ exports.notifyDelete = async (req, res) => {
     const deleted = await q.deleteReminder(userId, notification_id);
     if (deleted.rowCount === 0) return failSoft(res, "Notification not found");
 
-    NotifyService.deledeSchedule(deleted.rows[0].event_id)
+    deledeSchedule(deleted.rows[0].event_id)
 
     logger.info("notify.delete", { requestId: req.requestId, userId, notificationId: notification_id });
 
