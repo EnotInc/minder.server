@@ -32,16 +32,23 @@ exports.register = async (req, res) => {
     const created = await authQ.createUser({ username, email, password_hash });
     const user = created.rows[0];
 
-    await authQ.creadeDevice(user.id, fcmToken)
+    await authQ.saveDevice(user.id, fcmToken);
 
     const accessToken = signAccessToken({ userId: user.id, email: user.email });
     const refreshToken = signRefreshToken({ userId: user.id });
 
-    await rtQ.insertRefreshToken(user.id, hashToken(refreshToken), calcRefreshExpiresAt());
+    await rtQ.insertRefreshToken(
+      user.id,
+      hashToken(refreshToken),
+      calcRefreshExpiresAt()
+    );
 
     logger.info("auth.register", { requestId: req.requestId, userId: user.id });
 
-    return ok(res, "Registered", { access_token: accessToken, refresh_token: refreshToken });
+    return ok(res, "Registered", {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
   } catch (e) {
     logger.error("auth.register failed", e, { requestId: req.requestId });
     return fail(res, 500, "Server error");
@@ -66,21 +73,28 @@ exports.login = async (req, res) => {
       return failSoft(res, "User is inactive");
     }
 
-    await authQ.updateDevice(user.id, fcmToken)
-
     const match = await bcrypt.compare(password, user.password_hash);
     if (!match) {
       return failSoft(res, "Invalid credentials");
     }
 
+    await authQ.saveDevice(user.id, fcmToken);
+
     const accessToken = signAccessToken({ userId: user.id, email: user.email });
     const refreshToken = signRefreshToken({ userId: user.id });
 
-    await rtQ.insertRefreshToken(user.id, hashToken(refreshToken), calcRefreshExpiresAt());
+    await rtQ.insertRefreshToken(
+      user.id,
+      hashToken(refreshToken),
+      calcRefreshExpiresAt()
+    );
 
     logger.info("auth.login", { requestId: req.requestId, userId: user.id });
 
-    return ok(res, "Logged in", { access_token: accessToken, refresh_token: refreshToken });
+    return ok(res, "Logged in", {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+    });
   } catch (e) {
     logger.error("auth.login failed", e, { requestId: req.requestId });
     return fail(res, 500, "Server error");
@@ -90,6 +104,7 @@ exports.login = async (req, res) => {
 exports.refresh = async (req, res) => {
   try {
     const { refresh_token } = req.body || {};
+
     if (!refresh_token) {
       return failSoft(res, "refresh_token is required");
     }
@@ -103,14 +118,17 @@ exports.refresh = async (req, res) => {
 
     const oldHash = hashToken(refresh_token);
     const existing = await rtQ.findRefreshToken(oldHash);
+
     if (existing.rowCount === 0) {
       return failSoft(res, "Refresh token not found");
     }
 
     const row = existing.rows[0];
+
     if (row.revoked_at) {
       return failSoft(res, "Refresh token revoked");
     }
+
     if (new Date(row.expires_at) < new Date()) {
       return failSoft(res, "Refresh token expired");
     }
@@ -120,9 +138,16 @@ exports.refresh = async (req, res) => {
     const newHash = hashToken(newRefreshToken);
 
     await rtQ.revokeRefreshToken(row.id, newHash);
-    await rtQ.insertRefreshToken(payload.userId, newHash, calcRefreshExpiresAt());
+    await rtQ.insertRefreshToken(
+      payload.userId,
+      newHash,
+      calcRefreshExpiresAt()
+    );
 
-    logger.info("auth.refresh", { requestId: req.requestId, userId: payload.userId });
+    logger.info("auth.refresh", {
+      requestId: req.requestId,
+      userId: payload.userId,
+    });
 
     return ok(res, "Token refreshed", {
       access_token: newAccessToken,
@@ -137,6 +162,7 @@ exports.refresh = async (req, res) => {
 exports.logout = async (req, res) => {
   try {
     const { refresh_token } = req.body || {};
+
     if (!refresh_token) {
       return failSoft(res, "refresh_token is required");
     }
@@ -144,9 +170,10 @@ exports.logout = async (req, res) => {
     const tokenHash = hashToken(refresh_token);
     const logout = await rtQ.logoutRefreshToken(tokenHash);
 
-    const user_id = logout.rows[0].user_id
-    await rtQ.logoutFcmToken(user_id);
-
+    if (logout.rowCount > 0) {
+      const user_id = logout.rows[0].user_id;
+      await rtQ.deactivateUserDevices(user_id);
+    }
 
     logger.info("auth.logout", { requestId: req.requestId });
 
