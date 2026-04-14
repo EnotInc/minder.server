@@ -116,7 +116,8 @@ async function updateReminder(userId, notification) {
   const q = `
     UPDATE reminders
     SET remind_at = COALESCE($1::timestamptz, remind_at),
-        notification_type = COALESCE($2, notification_type)
+        notification_type = COALESCE($2, notification_type),
+        is_sent = false, sent_at = NULL
     WHERE id = $3 AND user_id = $4
     RETURNING id, event_id
   `;
@@ -159,12 +160,12 @@ async function listAllReminders() {
   );
 }
 
-async function markAsSend(event_id) {
+async function markAsSend(id) {
   return pool.query(
     ` UPDATE reminders
       SET is_sent = true, sent_at = current_timestamp
-      Where event_id = $1`,
-    [event_id]
+      WHERE id = $1`,
+    [id]
   );
 }
 

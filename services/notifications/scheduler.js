@@ -90,7 +90,6 @@ async function addSchedule (when, user_id, note_id) {
           },
           fcmToken: fcmToken.rows[0].fcm_token
         })
-        //await q_notes.deleteReminder(user_id, note.notification.id)
         await q_notes.markAsSend(note.notification.id)
       });
     } catch (e) {
